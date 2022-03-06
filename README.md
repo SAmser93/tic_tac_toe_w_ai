@@ -1,7 +1,8 @@
 # tic_tac_toe_w_ai
 
 ## Описание
-Реализация игры "Крестики-нолики" с ИИ, использующим минимаксную стратегию
+Реализация игры "Крестики-нолики" с ИИ, использующим минимаксную стратегию. Реализация основана на статье 
+https://geekflare.com/tic-tac-toe-python-code/ и проекте https://github.com/Cledersonbc/tic-tac-toe-minimax
 
 ## Запуск
 `python main.py`
