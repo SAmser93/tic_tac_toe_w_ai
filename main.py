@@ -1,8 +1,13 @@
 # tic-tac-toe v 0.1
 # based on https://geekflare.com/tic-tac-toe-python-code/
 # and https://github.com/Cledersonbc/tic-tac-toe-minimax
-
 import random
+import time
+from math import inf as infinity
+from random import choice
+
+PLAYER = -1
+CPU = +1
 
 
 class TicTacToe:
@@ -11,132 +16,188 @@ class TicTacToe:
     def get_random_first_player(cls):
         return random.randint(0, 1)
 
-    @classmethod
-    def swap_player_turn(cls, player):
-        return 'X' if player == 'O' else 'O'
-
     def __init__(self):
-        self.board = []
+        self.board = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]
 
-    def create_board(self):
-        for i in range(3):
-            row = []
-            for j in range(3):
-                row.append('-')
-            self.board.append(row)
+    def get_empty_cells(self):
+        cells = []
 
-    def fix_spot(self, row, col, player):
-        self.board[row][col] = player
+        for x, row in enumerate(self.board):
+            for y, cell in enumerate(row):
+                if cell == 0:
+                    cells.append([x, y])
 
-    def is_player_win(self, player):
+        return cells
 
-        n = len(self.board)
-
-        # checking rows
-        for i in range(n):
-            win = True
-            for j in range(n):
-                if self.board[i][j] != player:
-                    win = False
-                    break
-            if win:
-                return win
-
-        # checking columns
-        for i in range(n):
-            win = True
-            for j in range(n):
-                if self.board[j][i] != player:
-                    win = False
-                    break
-            if win:
-                return win
-
-        # checking diagonals
-        win = True
-        for i in range(n):
-            if self.board[i][i] != player:
-                win = False
-                break
-        if win:
-            return win
-
-        win = True
-        for i in range(n):
-            if self.board[i][n - 1 - i] != player:
-                win = False
-                break
-        if win:
-            return win
-        return False
-
-    def is_board_filled(self):
-        for row in self.board:
-            for item in row:
-                if item == '-':
-                    return False
-        return True
-
-    def show_board(self):
-        for row in self.board:
-            for item in row:
-                print(item, end=" ")
-            print()
-
-    def is_input_correct(self, row, col):
-        if (row > len(self.board)) or (row < 1):
+    def is_won(self, player):
+        win_state = [
+            [self.board[0][0], self.board[0][1], self.board[0][2]],
+            [self.board[1][0], self.board[1][1], self.board[1][2]],
+            [self.board[2][0], self.board[2][1], self.board[2][2]],
+            [self.board[0][0], self.board[1][0], self.board[2][0]],
+            [self.board[0][1], self.board[1][1], self.board[2][1]],
+            [self.board[0][2], self.board[1][2], self.board[2][2]],
+            [self.board[0][0], self.board[1][1], self.board[2][2]],
+            [self.board[2][0], self.board[1][1], self.board[0][2]],
+        ]
+        if [player, player, player] in win_state:
+            return True
+        else:
             return False
-        elif (col > len(self.board[0])) or (col < 1):
+
+    def is_game_over(self):
+        return self.is_won(PLAYER) or self.is_won(CPU)
+
+    def render(self, cpu_sign, player_sign):
+
+        chars = {
+            -1: player_sign,
+            +1: cpu_sign,
+            0: ' '
+        }
+        str_line = '---------------'
+
+        print('\n' + str_line)
+        for row in self.board:
+            for cell in row:
+                symbol = chars[cell]
+                print(f'| {symbol} |', end='')
+            print('\n' + str_line)
+
+    def evaluate(self):
+        if self.is_won(CPU):
+            score = +1
+        elif self.is_won(PLAYER):
+            score = -1
+        else:
+            score = 0
+
+        return score
+
+    def valid_move(self, x, y):
+        if [x, y] in self.get_empty_cells():
+            return True
+        else:
             return False
-        return True
+
+    def set_move(self, x, y, player):
+        if self.valid_move(x, y):
+            self.board[x][y] = player
+            return True
+        else:
+            return False
+
+    def minimax(self, depth, player):
+        if player == CPU:
+            best = [-1, -1, -infinity]
+        else:
+            best = [-1, -1, +infinity]
+
+        if depth == 0 or self.is_game_over():
+            score = self.evaluate()
+            return [-1, -1, score]
+
+        for cell in self.get_empty_cells():
+            x, y = cell[0], cell[1]
+            self.board[x][y] = player
+            score = self.minimax(depth - 1, -player)
+            self.board[x][y] = 0
+            score[0], score[1] = x, y
+
+            if player == CPU:
+                if score[2] > best[2]:
+                    best = score  # max value
+            else:
+                if score[2] < best[2]:
+                    best = score  # min value
+
+        return best
+
+    def ai_turn(self, cpu_sign, player_sign):
+        depth = len(self.get_empty_cells())
+        if depth == 0 or self.is_game_over():
+            return
+
+        print(f'CPU turn [{cpu_sign}]')
+        self.render(cpu_sign, player_sign)
+
+        if depth == 9:
+            x = choice([0, 1, 2])
+            y = choice([0, 1, 2])
+        else:
+            move = self.minimax(depth, CPU)
+            x, y = move[0], move[1]
+
+        self.set_move(x, y, CPU)
+        time.sleep(1)
+
+    def human_turn(self, cpu_sign, player_sign):
+        depth = len(self.get_empty_cells())
+        if depth == 0 or self.is_game_over():
+            return
+
+        row = -1
+        col = -1
+
+        print(f'Player turn [{player_sign}]')
+        self.render(cpu_sign, player_sign)
+
+        while (row < 1 or row > 3) and (col < 1 or col > 3):
+            try:
+                move = input("Enter row and column numbers: ")
+                row, col = list(map(int, move.split()))
+
+                if (row < 1 or row > 3) or (col < 1 or col > 3):
+                    print('Enter values between 1 and 3')
+                    row = -1
+                    col = -1
+
+                else:
+                    can_move = self.set_move(row - 1, col - 1, PLAYER)
+                    if not can_move:
+                        print('This cell is not empty')
+                        row = -1
+                        col = -1
+            except (EOFError, KeyboardInterrupt):
+                print('Bye')
+                exit()
+            except (KeyError, ValueError):
+                print('Enter two int values between 1 and 3')
 
     def start(self):
-        self.create_board()
 
-        # O is always the computer
-        player = 'X' if self.get_random_first_player() == 1 else 'O'
-        while True:
-            print(f"Player {player} turn")
+        # 1 - Player gets the first turn, 0 - CPU gets it
+        first = self.get_random_first_player()
 
-            self.show_board()
-            entered_value = ""
+        player_sign = 'X'
+        cpu_sign = 'O'
 
-            # taking user input
-            try:
-                entered_value = input("Enter row and column numbers to fix spot: ")
-                entered_values = entered_value.split()
-                row, col = list(map(int, entered_values))
-                if not self.is_input_correct(row, col):
-                    raise ValueError("Column or row number is incorrect")
-            except Exception as e:
-                print(f"Input {entered_value} has failed: reason: {e}")
-                continue
+        while len(self.get_empty_cells()) > 0 and not self.is_game_over():
 
-            # fixing the spot
-            self.fix_spot(row - 1, col - 1, player)
+            if first == 1:
+                print("CPU gets first turn")
+                self.ai_turn(cpu_sign, player_sign)
+                first = None
+            else:
+                print("Player gets first turn")
 
-            # checking whether current player is won or not
-            if self.is_player_win(player):
-                print(f"Player {player} wins the game!")
-                break
+            self.human_turn(cpu_sign, player_sign)
+            self.ai_turn(cpu_sign, player_sign)
 
-            # checking whether the game is draw or not
-            if self.is_board_filled():
-                print("Match Draw!")
-                break
-
-            # swapping the turn
-            player = self.swap_player_turn(player)
-
-        # showing the final view of board
-        print()
-        self.show_board()
+        # Game over message
+        self.render(cpu_sign, player_sign)
+        if self.is_won(PLAYER):
+            print('HUMAN WIN!')
+        elif self.is_won(CPU):
+            print('CPU WIN!')
+        else:
+            print('DRAW!')
 
 
 if __name__ == '__main__':
-    # starting the game
     tic_tac_toe = TicTacToe()
     tic_tac_toe.start()
-
-# TODO:
-# 2. Добавить ИИ, нолик - всегда комп
